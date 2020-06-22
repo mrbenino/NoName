@@ -50,13 +50,20 @@ bot.command('order', async (ctx) => {
     })
     await order.on('text', async (ctx) => {
         if (ctx.message.text == "картой"){
-            getCategory(ctx)
-            ctx.scene.leave()
+            // ctx.reply('https://mrbenino.mnml.pp.ua/form.html')
+            ctx.reply('<b>Нажмите</b> <i>💳 оплатить</i> что бы оплатить заказ', Extra.HTML().markup((m) =>
+            m.inlineKeyboard([
+            m.urlButton('💳 оплатить', 'https://mrbenino.mnml.pp.ua')
+            ])))
+            // getCategory(ctx)
+            // ctx.scene.leave()
         }else if (ctx.message.text == "наличными"){
             ctx.reply('Оплата наличными')
             getCategory(ctx)
             ctx.scene.leave()
         }
+        await ctx.scene.leave()
+        await getCategory(ctx)
     })
     order.leave((ctx) => ctx.reply('Спасибо, ожидайте ваш заказ 😉'))
 })
