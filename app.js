@@ -19,21 +19,46 @@ console.log('└────────────────────┘'
 category = []
 
 bot.use(Telegraf.log())
+stage.register(order)
+bot.use(session())
+bot.use(stage.middleware())
 
 bot.start((ctx) => {
     getCategory(ctx)
     return ctx.reply('😉')
 })
 
-order.enter((ctx) => ctx.reply('Хочешь заказать?'))
-order.leave((ctx) => ctx.reply(''))
-order.hears(/hi/gi, leave())
-stage.command('okey', leave())
-stage.register(order)
-bot.use(session())
-bot.use(stage.middleware())
-bot.command('order', (ctx) => {
+bot.command('order', async (ctx) => {
     ctx.scene.enter('order')
+    ctx.reply(`Что бы сделать заказ нам нужно уточнить некоторые детали. ${ctx.message.from.first_name} как вы хотите оплаить заказ?`)
+    category.splice(0, category.length + 1)
+    category[0] = "картой"
+    category[1] = "наличными"
+    category[2] = "/info"
+    ctx.reply('выберите:', Extra.markup(
+        Markup.keyboard(category, {
+            columns: 2
+        })
+    ))
+    order.command('info',async (ctx) => {
+        ctx.reply('Оплата картой - у нас действует поощрительная скидка на оплату картой. \n Оплата наличными - не забудте оставить чаевые если вам все понравилось \n Что бы отменить заказ нажмите /leave')
+    })
+    order.command('leave',(ctx) => {
+        ctx.reply('🙃')
+        getCategory(ctx)
+        ctx.scene.leave()
+    })
+    await order.on('text', async (ctx) => {
+        if (ctx.message.text == "картой"){
+            getCategory(ctx)
+            ctx.scene.leave()
+        }else if (ctx.message.text == "наличными"){
+            ctx.reply('Оплата наличными')
+            getCategory(ctx)
+            ctx.scene.leave()
+        }
+    })
+    order.leave((ctx) => ctx.reply('Спасибо, ожидайте ваш заказ 😉'))
 })
 
 
