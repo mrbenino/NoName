@@ -1,34 +1,62 @@
 const { Telegraf } = require('telegraf')
 const Extra = require('telegraf/extra')
 const Markup = require('telegraf/markup')
+const session = require('telegraf/session')
+const Stage = require('telegraf/stage')
+const Scene = require('telegraf/scenes/base')
+const { leave,enter } = Stage
 const config = require('config')
 const bot = new Telegraf(config.get('token'))
 const axios = require('axios');
+
+const order = new Scene('order')
+const stage = new Stage()
 
 console.log('┌────────────────────┐')
 console.log('│ bot by:  @mrbenino │')
 console.log('└────────────────────┘')
 
-let category = []
+category = []
 
 bot.use(Telegraf.log())
 
 bot.start((ctx) => {
     getCategory(ctx)
-    return ctx.reply('😉');
+    return ctx.reply('😉')
 })
-bot.on('text' , (ctx) => {
-    let param = ctx.message.text
-    if (category.indexOf(param)) {
-        byCategory(ctx)
-    }else ctx.reply('Я вас не понимаю 🧐')
-    return ctx.reply('😉');
+
+order.enter((ctx) => ctx.reply('Хочешь заказать?'))
+order.leave((ctx) => ctx.reply(''))
+order.hears(/hi/gi, leave())
+stage.command('okey', leave())
+stage.register(order)
+bot.use(session())
+bot.use(stage.middleware())
+bot.command('order', (ctx) => {
+    ctx.scene.enter('order')
 })
+
 
 bot.command('category', (ctx) => {
     getCategory(ctx)
+    return ctx.reply('😉')
+})
+
+bot.command('allproduct', (ctx) => {
+    getAll(ctx)
+    return ctx.reply('😉')
+})
+
+bot.help( (ctx) => {
+    ctx.reply('Выбери одну из команд: \n /category - обновить категории \n /allproduct - все блюда \n 😇')
+    return ctx.reply('😉')
+})
+
+bot.on('text' , (ctx) => {
+    let param = ctx.message.text
+    byCategory(ctx , param)
     return ctx.reply('😉');
-});
+})
 
 function getCategory(ctx) {    
     axios({
@@ -52,6 +80,7 @@ function getCategory(ctx) {
                 console.log(`${response.data[i].name}\n`);
                 category[i] = response.data[i].name
             }
+            category[response.data.length+1] = "/help"
             return ctx.reply('MENU', Extra.markup(
                 Markup.keyboard(category, {
                     columns: 2
@@ -101,8 +130,7 @@ function getAll(ctx){
     })
 };
 
-function byCategory(ctx) {
-    let param = ctx.message.text
+function byCategory(ctx , param) {
     axios({
         method: 'POST',
         withCredentials: true,
@@ -124,7 +152,7 @@ function byCategory(ctx) {
             for (let i = 0; i < response.data.length; i++) {
                 console.log(`${response.data[i].name}\n${response.data[i].description}\n${response.data[i].constituents}\n${response.data[i].price}\n${response.data[i].discount}`);
                 
-                ctx.reply(`${response.data[i].name}\n${response.data[i].description}\n${response.data[i].constituents}\n${response.data[i].price}\n${response.data[i].discount}`)
+                ctx.reply(`${response.data[i].name}\n${response.data[i].description}\n${response.data[i].constituents}\n${response.data[i].price}\n${response.data[i].discount}\n /order`)
             }
         })
         .catch(function (error) {
@@ -135,4 +163,5 @@ function byCategory(ctx) {
         console.log(error);
     })
 }
+
 bot.launch()
